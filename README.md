@@ -6,7 +6,6 @@ A **decentralized gig economy dApp** built on **Arbitrum Stylus**, enabling user
 
 - Funds are locked in **escrow** via a Rust smart contract.
 - Showcases **low gas costs**, **Rust memory safety**, and **EVM compatibility**.
----
 
 ## 📌 Project Overview
 
