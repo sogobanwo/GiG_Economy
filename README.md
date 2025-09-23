@@ -2,7 +2,6 @@
 
 [![Built with Arbitrum Stylus](https://img.shields.io/badge/Built%20on-Arbitrum%20Stylus-blue)](https://developer.arbitrum.io/stylus) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)  
 
----
 A **decentralized gig economy dApp** built on **Arbitrum Stylus**, enabling users to post micro-tasks (e.g., “design a logo,” “translate a sentence”) with ETH or test tokens as bounties.
 
 - Funds are locked in **escrow** via a Rust smart contract.
