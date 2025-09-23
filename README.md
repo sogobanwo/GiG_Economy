@@ -56,7 +56,7 @@ cargo stylus check
 ```bash
 cd frontend
 npm install
-npm start
+npm run dev
 ```
 
 ### Testnet Configuration
