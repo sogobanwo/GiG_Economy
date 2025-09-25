@@ -162,24 +162,44 @@ impl GigEconomy {
         stats.completed_count.set(completed_count);
         stats.total_earned.set(bounty);
     }
-    // pub fn get_all_tasks_counter(&self) -> U256 {
-    //     self.task_counter.get()
-    // }
-    // pub fn get_task_submission_counter(&self, task_id: U256) -> U256 {
-    //     self.task_submissions_counter.get(task_id)
-    // }
-    // pub fn get_task(&self, task_id: U256) -> (U256, Address, U256, Address, String, U8, Address) {
-    //     self._check_if_task_id_is_valid(&task_id);
-    //     let task = self.tasks.get(task_id);
-    //     let id = task.id.get();
-    //     let creator = task.creator.get();
-    //     let bounty = task.bounty.get();
-    //     let token = task.token.get();
-    //     let description = task.description.get_string();
-    //     let status = task.status.get();
-    //     let winner = task.winner.get();
-    //     (id, creator, bounty, token, description, status, winner)
-    // }
+    pub fn get_all_tasks_counter(&self) -> U256 {
+        self.task_counter.get()
+    }
+    pub fn get_task_submission_counter(&self, task_id: U256) -> U256 {
+        self.task_submissions_counter.get(task_id)
+    }
+    pub fn get_task(&self, task_id: U256) -> (U256, Address, U256, Address, String, U8, Address) {
+        self._check_if_task_id_is_valid(&task_id);
+        let task = self.tasks.get(task_id);
+        let id = task.id.get();
+        let creator = task.creator.get();
+        let bounty = task.bounty.get();
+        let token = task.token.get();
+        let description = task.description.get_string();
+        let status = task.status.get();
+        let winner = task.winner.get();
+        (id, creator, bounty, token, description, status, winner)
+    }
+    
+    pub fn get_task_submission(
+        &self, 
+        task_id: U256, 
+        submission_id: U256
+    ) -> (U256, Address, String, bool) {
+        self._check_if_task_id_is_valid(&task_id);
+        self._check_if_a_valid_submission_id(&submission_id, &task_id);
+
+        let submissions_map = self.task_submissions.get(task_id);
+    
+        let submission = submissions_map.get(submission_id);
+    
+        let id = submission.id.get();
+        let submitter = submission.submitter.get();
+        let content = submission.content.get_string();
+        let approved = submission.approved.get();
+    
+        (id, submitter, content, approved)
+    }
 }
 
 impl GigEconomy {

@@ -12,3 +12,8 @@ abi:
 check:
 	@echo "checking the contract"
 	@cargo stylus check
+
+deploy_testnet:
+	@echo "deploying locally!"
+	@cargo stylus deploy -e $(RPC_TESTNET) --no-verify --private-key $(PRIVATE_KEY_TEST)
+
