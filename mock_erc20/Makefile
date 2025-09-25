@@ -7,7 +7,7 @@ deploy_local:
 
 abi:
 	@echo "writting to a file ..."
-	@cargo stylus export-abi --json --output gig1.json
+	@cargo stylus export-abi --json --output mock_erc20.json
 
 check:
 	@echo "checking the contract"
