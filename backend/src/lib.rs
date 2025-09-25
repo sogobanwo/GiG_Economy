@@ -6,7 +6,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
-use alloc::string::String;
+// use alloc::string::String;
 
 use stylus_sdk::{
     alloy_primitives::{Address, U256, U8}, prelude::*, 
@@ -56,7 +56,7 @@ pub struct Task {
     pub token: StorageAddress, 
     pub description: StorageString,
     pub status: StorageU8, // 0=Open, 1=Submitted, 2=Approved, 3=Disputed
-    pub submissions: StorageVec<Submission>,
+    // pub submissions: StorageVec<Submission>,
     pub winner: StorageAddress,
 }
 
@@ -68,7 +68,7 @@ pub struct UserStats {
 }
 
 #[storage]
-#[entrypoint]
+// #[entrypoint]
 pub struct GigEconomy {
     pub tasks: StorageMap<U256, Task>,             
     pub task_counter: StorageU256,
@@ -78,132 +78,126 @@ pub struct GigEconomy {
 }
 
 
-#[public]
-impl GigEconomy {
 
-    pub fn create_task(&mut self, description: String, bounty: U256, token_address: Address) {
-        assert!(bounty > U256::from(0), "Bounty must be > 0");
-        assert!(!description.is_empty(), "Description cannot be empty");
+// #[public]
+// impl GigEconomy {
 
-        let creator = self.vm().msg_sender();
-        let id = self.task_counter.get() + U256::from(1);
-        let contract_addr = self.vm().contract_address();
+    // pub fn create_task(&mut self, description: String, bounty: U256, token_address: Address) {
+    //     assert!(bounty > U256::from(0), "Bounty must be > 0");
+    //     assert!(!description.is_empty(), "Description cannot be empty");
 
-        // Transfer bounty into contract
-        let token_contract = IErc20::new(token_address);
-        token_contract.transfer_from(&mut *self, creator, contract_addr, bounty);
+    //     let creator = self.vm().msg_sender();
+    //     let id = self.task_counter.get() + U256::from(1);
+    //     let contract_addr = self.vm().contract_address();
 
-        // Save task
-        let mut task = self.tasks.setter(id);
-        task.id.set(id);
-        task.creator.set(creator);
-        task.bounty.set(bounty);
-        task.token.set(token_address);
-        task.description.set_str(&description);
-        task.status.set(U8::from(TaskStatus::Open as u8));
-        task.winner.set(Address::ZERO);
+    //     // Transfer bounty into contract
+    //     let token_contract = IErc20::new(token_address);
+    //     token_contract.transfer_from(&mut *self, creator, contract_addr, bounty);
 
-        // update task counter
-        self.task_counter.set(id);
+    //     // Save task
+    //     let mut task = self.tasks.setter(id);
+    //     task.id.set(id);
+    //     task.creator.set(creator);
+    //     task.bounty.set(bounty);
+    //     task.token.set(token_address);
+    //     task.description.set_str(&description);
+    //     task.status.set(U8::from(TaskStatus::Open as u8));
+    //     task.winner.set(Address::ZERO);
 
-        // update user stats
-        let mut stats = match self.user_stats.get(creator) {
-            Some(s) => s,
-            None => {
-                let mut s = UserStats::new();
-                s.created_count.set(U256::from(0));
-                s.completed_count.set(U256::from(0));
-                s.total_earned.set(U256::from(0));
-                s
-            }
-        };
-        stats.created_count.set(stats.created_count.get() + U256::from(1));
-        self.user_stats.insert(creator, stats);
-    }
+    //     // update task counter
+    //     self.task_counter.set(id);
 
-    pub fn submit_task(&mut self, task_id: U256, content: String) {
-        assert!(!content.is_empty(), "Content cannot be empty");
-        self.check_if_task_id_is_valid(task_id);
+    //     // update user stats
+    //     let _ttats = self.user_stats.get(creator);
+    //     // let tt = stats.completed_count.get();
+    //     // stats.created_count.set(U256::from(1));
+    //     self.user_stats.setter(creator);
+    // }
 
-        let submitter = self.vm().msg_sender();
-        let task = self.tasks.get(task_id);
-        let status: TaskStatus = TaskStatus::from(task.status.get());
-        assert!(status == TaskStatus::Open, "Task not open");
+    // pub fn submit_task(&mut self, task_id: U256, content: String) {
+    //     assert!(!content.is_empty(), "Content cannot be empty");
+    //     self.check_if_task_id_is_valid(task_id);
 
-        let new_sub_id = self.task_submissions_counter.get(task_id) + U256::from(1);
-        let mut binding = self.task_submissions.setter(task_id);
-        let mut submission = binding.setter(new_sub_id);
+    //     let submitter = self.vm().msg_sender();
+    //     let task = self.tasks.get(task_id);
+    //     let status: TaskStatus = TaskStatus::from(task.status.get());
+    //     assert!(status == TaskStatus::Open, "Task not open");
 
-        submission.id.set(new_sub_id);
-        submission.submitter.set(submitter);
-        submission.content.set_str(&content);
-        submission.approved.set(false);
+    //     let new_sub_id = self.task_submissions_counter.get(task_id) + U256::from(1);
+    //     let mut binding = self.task_submissions.setter(task_id);
+    //     let mut submission = binding.setter(new_sub_id);
 
-        // bump submission counter
-        self.task_submissions_counter.setter(task_id).set(new_sub_id);
-    }
+    //     submission.id.set(new_sub_id);
+    //     submission.submitter.set(submitter);
+    //     submission.content.set_str(content);
+    //     submission.approved.set(false);
 
-    pub fn approve_submission(&mut self, task_id: U256, sub_id: U256) {
-        self.check_if_task_id_is_valid(task_id);
+    //     // bump submission counter
+    //     self.task_submissions_counter.setter(task_id).set(new_sub_id);
+    // }
 
-        let sender = self.vm().msg_sender();
-        let task = self.tasks.get(task_id);
-        assert!(task.creator.get() == sender, "Not task creator");
-
-        let status: TaskStatus = TaskStatus::from(task.status.get());
-        assert!(status == TaskStatus::Open, "Task not open");
-
-        let max_sub_id = self.task_submissions_counter.get(task_id);
-        assert!(sub_id > U256::from(0) && sub_id <= max_sub_id, "Invalid submission ID");
-
-        // get submission map for this task
-        let mut sub_map = self.task_submissions.setter(task_id);
-
-        // then get specific submission
-        let mut submission = sub_map.setter(sub_id);
-
-        submission.approved.set(true);
-
-        // finalize task
-        {
-            let mut task_mut = self.tasks.setter(task_id);
-            task_mut.status.set(U8::from(TaskStatus::Completed as u8));
-            let winner_addr = submission.submitter.get();
-            task_mut.winner.set(winner_addr);
-
-            // payout
-            let token_addr = task.token.get();
-            let token_iface = IErc20::new(token_addr);
-            token_iface.transfer(winner_addr, task.bounty.get());
-
-            // update stats
-            let mut stats = match self.user_stats.get(winner_addr) {
-                Some(s) => s,
-                None => {
-                    let mut s = UserStats::new();
-                    s.created_count.set(U256::from(0));
-                    s.completed_count.set(U256::from(0));
-                    s.total_earned.set(U256::from(0));
-                    s
-                }
-            };
-            stats.completed_count.set(stats.completed_count.get() + U256::from(1));
-            stats.total_earned.set(stats.total_earned.get() + task.bounty.get());
-            self.user_stats.insert(winner_addr, stats);
-        }
-    }
-}
-
-impl GigEconomy {
+    // pub fn approve_submission(&mut self, task_id: U256, sub_id: U256) {
+        // self.check_if_task_id_is_valid(task_id);
     
-    fn check_if_task_id_is_valid(&self, task_id: U256) {
-        assert!(task_id > U256::from(0) && task_id <= self.task_counter.get(), "Invalid task ID");
-    }
-        if self.task_counter.get() < task_id {
+        // let sender = self.vm().msg_sender();
+        // let mut task = self.tasks.get(task_id);
+        // assert!(task.creator.get() == sender, "Not task creator");
+    
+        // let status: TaskStatus = TaskStatus::from(task.status.get());
+        // assert!(status == TaskStatus::Open, "Task not open");
+    
+        // let max_sub_id = self.task_submissions_counter.get(task_id);
+        // assert!(sub_id > U256::from(0) && sub_id <= max_sub_id, "Invalid submission ID");
+    
+        // // get submission map for this task
+        // let mut sub_map = self.task_submissions.get(task_id);
+
+
+
+        
+        // // then get specific submission
+        // let mut submission = sub_map.setter(sub_id);
+
+        // submission.approved.set(true);
+
+        // // finalize task
+        // {
+        //     let mut task_mut = self.tasks.setter(task_id);
+        //     task_mut.status.set(U8::from(TaskStatus::Completed as u8));
+        //     let winner_addr = submission.submitter.get();
+        //     task_mut.winner.set(winner_addr);
+        // }
+    
+        // // payout
+        // let token_addr = task.token.get();
+        // let token_iface = IErc20::new(token_addr);
+        // token_iface.transfer(winner_addr, task.bounty.get());
+    
+        // // update stats
+        // let mut stats = match self.user_stats.get(winner_addr) {
+        //     Some(s) => s,
+        //     None => {
+        //         let mut s = UserStats::new();
+        //         s.created_count.set(U256::from(0));
+        //         s.completed_count.set(U256::from(0));
+        //         s.total_earned.set(U256::from(0));
+        //         s
+        //     }
+        // };
+        // stats.completed_count.set(stats.completed_count.get() + U256::from(1));
+        // stats.total_earned.set(stats.total_earned.get() + task.bounty.get());
+        // self.user_stats.insert(winner_addr, stats);
+    // }
+// }
+
+// impl GigEconomy {
+    
+//     fn check_if_task_id_is_valid(&self, task_id: U256) {
+//         if self.task_counter.get() < task_id {
             
-        }
-    }
-}
+//         }
+//     }
+// }
 
 // // Define task status enum
 // #[derive(Debug, Clone, PartialEq)]
