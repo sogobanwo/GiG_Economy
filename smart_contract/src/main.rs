@@ -6,8 +6,8 @@ pub extern "C" fn main() {}
 
 #[cfg(feature = "export-abi")]
 fn main() {
-    use stylus_sdk::abi::export::print_from_args;
     use stylus_hello_world::gig_economy::GigEconomy;
+    use stylus_sdk::abi::export::print_from_args;
 
     print_from_args::<GigEconomy>();
 }

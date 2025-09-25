@@ -1,5 +1,5 @@
-use alloc::vec::Vec;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 use stylus_sdk::{
     alloy_primitives::{Address, U256},
@@ -54,7 +54,10 @@ impl MockErc20 {
         let current_allowance = self.allowances.get(from).get(sender);
         assert!(current_allowance >= amount, "ERC20: insufficient allowance");
 
-        self.allowances.setter(from).setter(sender).set(current_allowance - amount);
+        self.allowances
+            .setter(from)
+            .setter(sender)
+            .set(current_allowance - amount);
         self._transfer(from, to, amount)
     }
 }

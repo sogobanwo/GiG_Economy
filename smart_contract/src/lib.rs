@@ -3,5 +3,5 @@
 
 #[macro_use]
 extern crate alloc;
-mod mock_erc20;
 pub mod gig_economy;
+mod mock_erc20;
