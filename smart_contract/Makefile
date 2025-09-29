@@ -1,6 +1,6 @@
 -include .env
 export
-
+# 0x525c2aba45f66987217323e8a05ea400c65d06dc
 deploy_local:
 	@echo "deploying locally!"
 	@cargo stylus deploy -e $(RPC) --no-verify --private-key $(PRIVATE_KEY)
@@ -20,4 +20,3 @@ deploy_testnet:
 verify_testnet:
 	@echo "verifying the contract"
 	@cargo stylus verify --deployment-tx $(TX_HASH) -e $(RPC_TESTNET)
-
