@@ -1,17 +1,17 @@
 import { useReadContract } from "wagmi";
-import { Address, getAddress } from "viem";
+import { getAddress } from "viem";
 import abi from "../../abis/abi.json";
 
-const useGetAgentReputationTier = (address: Address) => {
+const useGetTaskSubmissionById = (task_id: number, submission_id: number) => {
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
   const result = useReadContract({
     abi: abi,
     address: getAddress(contractAddress ? contractAddress : ""),
-    functionName: "reputationTier",
-    account: address,
+    functionName: "getTaskSubmission",
+    args: [task_id, submission_id]
   });
 
   return result;
 };
 
-export default useGetAgentReputationTier;
+export default useGetTaskSubmissionById;
