@@ -5,13 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Card,
   CardContent,
   CardDescription,
@@ -21,25 +14,28 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { FileText, Award } from "lucide-react";
+import { Award } from "lucide-react";
 import { useState } from "react";
 import NotConnected from "@/components/not-connected";
 import { useAppKitAccount } from "@reown/appkit/react";
 import useCreateTask from "@/hooks/write-hooks/useCreateTask";
 import { parseEther } from "viem";
 import { toast } from "sonner";
+import useGetAllTasks from "@/hooks/read-hooks/useGetAllTask";
+import useGetTaskById from "@/hooks/read-hooks/useGetTaskById";
 
 export default function CreateTaskPage() {
   const { isConnected } = useAppKitAccount();
+  const task = useGetTaskById(1)
+  console.log(task.data)
+
+  const allTask = useGetAllTasks()
+  console.log(allTask)
 
   const createTask = useCreateTask();
   const [formState, setFormState] = useState({
-    title: "",
     description: "",
-    publicHash: "",
-    expectedResult: "",
-    difficulty: "",
-    reward: "",
+    bounty: "",
   });
 
   const handleChange = (field: string, value: string) => {
@@ -49,26 +45,17 @@ export default function CreateTaskPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-   
-
     // Create task
     const response = await createTask(
-      formState.title,
       formState.description,
-      parseEther(formState.reward),
-      "1",
-      Number(formState.difficulty)
+      parseEther(formState.bounty)
     );
 
     if (response) {
       toast.success("Task created");
       setFormState({
-        title: "",
         description: "",
-        publicHash: "",
-        expectedResult: "",
-        difficulty: "",
-        reward: "",
+        bounty: "",
       });
     }
   };
@@ -103,19 +90,6 @@ export default function CreateTaskPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="title" className="text-white">
-                  Task Title
-                </Label>
-                <Input
-                  id="title"
-                  placeholder="E.g., Summarize AI Ethics Paper"
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
-                  value={formState.title}
-                  onChange={(e) => handleChange("title", e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="description" className="text-white">
                   Task Description
                 </Label>
@@ -128,79 +102,20 @@ export default function CreateTaskPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="expectedResult" className="text-white">
-                    Expected Result
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="ExpectedResult"
-                      type="text"
-                      className="bg-white/5 border-white/10 text-white"
-                      value={formState.expectedResult}
-                      onChange={(e) =>
-                        handleChange("expectedResult", e.target.value)
-                      }
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="difficulty" className="text-white">
-                    Difficulty
-                  </Label>
-                  <Select
-                    onValueChange={(value) => handleChange("difficulty", value)}
-                  >
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
-                      <SelectValue placeholder="Select difficulty" className="text-gray-500" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-black/90 border-white/10 text-white">
-                      <SelectItem value="0">Easy</SelectItem>
-                      <SelectItem value="1">Medium</SelectItem>
-                      <SelectItem value="2">Hard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="reward" className="text-white">
-                    Reward Amount (ETH)
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="reward"
-                      type="number"
-                      placeholder="0.0005"
-                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
-                      value={formState.reward}
-                      onChange={(e) => handleChange("reward", e.target.value)}
-                    />
-                    <Award className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
-                  </div>
-                </div>
-              </div>
               <div className="space-y-2">
-                <Label htmlFor="publicHash" className="text-white">
-                  Task Public Hash
+                <Label htmlFor="reward" className="text-white">
+                  Reward Amount (ETH)
                 </Label>
-                <div className="flex items-center space-x-2">
+                <div className="relative">
                   <Input
-                    id="publicHash"
-                    placeholder="0x123..."
+                    id="bounty"
+                    type="number"
+                    placeholder="0.0005"
                     className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
-                    value={formState.publicHash}
-                    disabled
+                    value={formState.bounty}
+                    onChange={(e) => handleChange("bounty", e.target.value)}
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="border-white/10 text-white"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
+                  <Award className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
                 </div>
               </div>
             </form>
