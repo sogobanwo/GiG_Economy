@@ -19,4 +19,4 @@ deploy_testnet:
 
 verify_testnet:
 	@echo "verifying the contract"
-	@cargo stylus verify --deployment-tx $(TX_HASH) -e $(RPC_TESTNET)
+	@cargo stylus verify --deployment-tx $(TX_HASH)
