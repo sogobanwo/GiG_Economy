@@ -1,111 +1,123 @@
-//!
-//! Stylus Hello World
-//!
-//! The following contract implements the Counter example from Foundry.
-//!
-//! ```solidity
-//! contract Counter {
-//!     uint256 public number;
-//!     function setNumber(uint256 newNumber) public {
-//!         number = newNumber;
-//!     }
-//!     function increment() public {
-//!         number++;
-//!     }
-//! }
-//! ```
-//!
-//! The program is ABI-equivalent with Solidity, which means you can call it from both Solidity and Rust.
-//! To do this, run `cargo stylus export-abi`.
-//!
-//! Note: this code is a template-only and has not been audited.
-//!
-// Allow `cargo stylus export-abi` to generate a main function.
 #![cfg_attr(not(any(test, feature = "export-abi")), no_main)]
 #![cfg_attr(not(any(test, feature = "export-abi")), no_std)]
 
 #[macro_use]
 extern crate alloc;
 
+use alloc::string::String;
 use alloc::vec::Vec;
 
-/// Import items from the SDK. The prelude contains common traits and macros.
+use alloy_primitives::Address;
+use alloy_primitives::U8;
 use stylus_sdk::{alloy_primitives::U256, prelude::*};
 
-// Define some persistent storage using the Solidity ABI.
-// `Counter` will be the entrypoint.
 sol_storage! {
     #[entrypoint]
-    pub struct Counter {
-        uint256 number;
+    pub struct GigEconomy {
+        address token;
+        uint256 taskCount;
+        mapping(uint256 => uint256) taskSubmissionsCount;
+        mapping(uint256 => Task) tasks;
+        mapping(uint256 => mapping(uint256 => Submission)) taskSubmissions;
+    }
+
+    pub struct Task {
+        address creator;
+        string name;
+        uint256 bounty;
+        uint8 status; // 1 = open, 2 = closed
+        address winner;
+    }
+
+    pub struct Submission {
+        address submitter;
+        string submission;
     }
 }
 
-/// Declare that `Counter` is a contract with the following external methods.
+sol_interface! {
+    interface IErc20 {
+        function transferFrom(address from, address to, uint256 tokens) external;
+        function transfer(address to, uint256 tokens) external;
+        function balanceOf(address owner) external view returns (uint256);
+    }
+}
+
 #[public]
-impl Counter {
-    /// Gets the number from storage.
-    pub fn number(&self) -> U256 {
-        self.number.get()
+impl GigEconomy {
+    pub fn init(&mut self, token: Address) {
+        self.token.set(token);
     }
 
-    /// Sets a number in storage to a user-specified value.
-    pub fn set_number(&mut self, new_number: U256) {
-        self.number.set(new_number);
+    pub fn token(&self) -> Address {
+        self.token.get()
     }
 
-    /// Sets a number in storage to a user-specified value.
-    pub fn mul_number(&mut self, new_number: U256) {
-        self.number.set(new_number * self.number.get());
+    pub fn create_task(&mut self, name: String, bount: U256) -> U256 {
+        let task_id = self.taskCount.get() + U256::from(1);
+        let creator = self.vm().msg_sender();
+        {
+            let token_contract = IErc20::new(self.token.get());
+            let contract_addr = self.vm().contract_address();
+            let _ = token_contract.transfer_from(&mut *self, creator, contract_addr, bount);
+        }
+        let mut task = self.tasks.setter(task_id);
+        task.creator.set(creator);
+        task.name.set_str(name);
+        task.bounty.set(bount);
+        self.taskCount.set(task_id);
+        task.status.set(U8::from(1));
+        task_id
     }
 
-    /// Sets a number in storage to a user-specified value.
-    pub fn add_number(&mut self, new_number: U256) {
-        self.number.set(new_number + self.number.get());
+    pub fn submit_task(&mut self, task_id: U256, submission: String) {
+        let task = self.tasks.get(task_id);
+        assert!(task.status.get() == U8::from(1), "Task is not open");
+        let submitter = self.vm().msg_sender();
+        let sub_id = self.taskSubmissionsCount.get(task_id) + U256::from(1);
+        let mut bind = self.taskSubmissions.setter(task_id);
+        let mut sub = bind.setter(sub_id);
+        sub.submitter.set(submitter);
+        sub.submission.set_str(submission);
+        self.taskSubmissionsCount.setter(task_id).set(sub_id);
     }
 
-    /// Increments `number` and updates its value in storage.
-    pub fn increment(&mut self) {
-        let number = self.number.get();
-        self.set_number(number + U256::from(1));
+    pub fn approve_submission(&mut self, task_id: U256, sub_id: U256) {
+        let task = self.tasks.get(task_id);
+        assert!(task.status.get() == U8::from(1), "Task is not open");
+
+        let interactor = self.vm().msg_sender();
+        assert!(interactor == task.creator.get(), "not the creator");
+
+        let binding = self.taskSubmissions.get(task_id);
+        let submission = binding.get(sub_id);
+
+        let mut task = self.tasks.setter(task_id);
+
+        task.status.set(U8::from(2));
+        task.winner.set(submission.submitter.get());
+        let token_contract = IErc20::new(self.token.get());
+
+        // let _ = token_contract.transfer(&mut *self, submission.submitter.get(), task.bounty.get());
     }
 
-    /// Adds the wei value from msg_value to the number in storage.
-    #[payable]
-    pub fn add_from_msg_value(&mut self) {
-        let number = self.number.get();
-        self.set_number(number + self.vm().msg_value());
+    pub fn get_task(&self, id: U256) -> (String, Address, U256, U8, Address) {
+        let task = self.tasks.getter(id);
+        (
+            task.name.get_string(),
+            task.creator.get(),
+            task.bounty.get(),
+            task.status.get(),
+            task.winner.get(),
+        )
     }
-}
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_counter() {
-        use stylus_sdk::testing::*;
-        let vm = TestVM::default();
-        let mut contract = Counter::from(&vm);
-
-        assert_eq!(U256::ZERO, contract.number());
-
-        contract.increment();
-        assert_eq!(U256::from(1), contract.number());
-
-        contract.add_number(U256::from(3));
-        assert_eq!(U256::from(4), contract.number());
-
-        contract.mul_number(U256::from(2));
-        assert_eq!(U256::from(8), contract.number());
-
-        contract.set_number(U256::from(100));
-        assert_eq!(U256::from(100), contract.number());
-
-        // Override the msg value for future contract method invocations.
-        vm.set_value(U256::from(2));
-
-        contract.add_from_msg_value();
-        assert_eq!(U256::from(102), contract.number());
+    pub fn get_submission(&self, task_id: U256, sub_id: U256) -> (Address, String) {
+        let binding = self.taskSubmissions.get(task_id);
+        let submission = binding.get(sub_id);
+        (
+            submission.submitter.get(),
+            submission.submission.get_string(),
+        )
     }
 }

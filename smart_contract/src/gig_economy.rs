@@ -2,14 +2,10 @@ use alloc::vec::Vec;
 
 use alloc::string::String;
 
-use alloy_sol_types::SolValue;
+use alloy_sol_types::sol;
 use stylus_sdk::{
     alloy_primitives::{Address, U256, U8},
     prelude::*,
-    storage::{
-        StorageAddress, StorageBool, StorageBytes, StorageGuard, StorageMap, StorageString,
-        StorageU256, StorageU8,
-    },
 };
 
 sol_interface! {
@@ -19,58 +15,32 @@ sol_interface! {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum TaskStatus {
-    Open = 0,
-    Completed = 1,
-    Disputed = 2,
-}
-
-impl From<U8> for TaskStatus {
-    fn from(value: U8) -> Self {
-        match value.to::<u8>() {
-            0 => TaskStatus::Open,
-            1 => TaskStatus::Completed,
-            2 => TaskStatus::Disputed,
-            _ => TaskStatus::Open,
-        }
-    }
-}
-
-#[storage]
-pub struct Submission {
-    pub id: StorageU256,
-    pub submitter: StorageAddress,
-    pub content: StorageString,
-    pub approved: StorageBool,
-}
-#[storage]
-pub struct Task {
-    pub id: StorageU256,
-    pub creator: StorageAddress,
-    pub bounty: StorageU256,
-    pub token: StorageAddress,
-    pub description: StorageString,
-    pub status: StorageU8, // 0=Open, 1=Submitted, 2=Approved, 3=Disputed
-    pub winner: StorageAddress,
-}
-#[storage]
-pub struct UserStats {
-    pub created_count: StorageU256,
-    pub completed_count: StorageU256,
-    pub total_earned: StorageU256,
-}
-
-// #[storage]
 sol_storage! {
+
+    pub struct Submission {
+        uint256 id;
+        address submitter;
+        string content;
+        bool approved;
+    }
+
+    pub struct UserStats {
+        uint256 created_count;
+        uint256 completed_count;
+        uint256 total_earned;
+    }
+
+    pub struct Task {
+        uint256 id;
+        address creator;
+        uint256 bounty;
+        address token;
+        string description;
+        uint8 status; // 0=Open, 1=Submitted, 2=Approved, 3=Disputed
+        address winner;
+    }
+
     #[entrypoint]
-    // pub struct GigEconomy {
-    //     pub tasks: StorageMap<U256, Task>,
-    //     pub task_counter: StorageU256,
-    //     pub task_submissions_counter: StorageMap<U256, StorageU256>,
-    //     pub task_submissions: StorageMap<U256, StorageMap<U256, Submission>>,
-    //     pub user_stats: StorageMap<Address, UserStats>,
-    // }
     pub struct GigEconomy {
      mapping(uint256 => Task) tasks;
      uint256 task_counter;
@@ -79,6 +49,13 @@ sol_storage! {
      mapping(address => UserStats) user_stats;
     }
 }
+
+sol! (
+    event TaskCreated(uint256 indexed id, address indexed creator, uint256 bounty);
+    event TaskSubmitted(uint256 indexed id, address indexed submitter,);
+    event TaskApproved(uint256 indexed id, address indexed winner);
+    event TaskDisputed(uint256 indexed id, address indexed submitter);
+);
 
 #[public]
 impl GigEconomy {
@@ -98,7 +75,7 @@ impl GigEconomy {
         task.bounty.set(bounty);
         task.token.set(token_address);
         task.description.set_str(&description);
-        task.status.set(U8::from(TaskStatus::Open as u8));
+        task.status.set(U8::from(0));
 
         self.task_counter.set(id);
 
@@ -108,10 +85,18 @@ impl GigEconomy {
         }
         let mut stat = self.user_stats.setter(creator);
         stat.created_count.set(total_created + U256::from(1));
+
+        log(
+            self.vm(),
+            TaskCreated {
+                id,
+                creator,
+                bounty,
+            },
+        );
     }
 
     pub fn submit_task(&mut self, task_id: U256, content: String) {
-        // assert!(!content.is_empty(), "Content cannot be empty");
         self._check_if_task_id_is_valid(&task_id);
 
         let submitter = self._get_msg_sender();
@@ -124,38 +109,58 @@ impl GigEconomy {
 
         submission.id.set(new_sub_id);
         submission.submitter.set(submitter);
-        submission.content.set_str(content);
+        submission.content.set_str(&content);
         submission.approved.set(false);
 
         self.task_submissions_counter
             .setter(task_id)
             .set(new_sub_id);
+
+        // Emit event
+        log(
+            self.vm(),
+            TaskSubmitted {
+                id: task_id,
+                submitter,
+            },
+        );
     }
-    fn approve_submission(&mut self, task_id: U256, submission_id: U256) {
+
+    // Fixed approve_submission function - NOW PUBLIC
+    pub fn approve_submission(&mut self, task_id: U256, submission_id: U256) {
         self._check_if_task_id_is_valid(&task_id);
+
+        let creator;
         {
             let task = self.tasks.get(task_id);
             self._check_if_task_is_open(&task.status.get());
-            // self._assert_owner(&task.creator.get());
-            // let creator: Address = self._get_msg_sender();
+            creator = task.creator.get();
+            self._assert_owner(&creator);
             self._check_if_a_valid_submission_id(&submission_id, &task_id);
         }
 
-        {
-            let mut task_u = self.tasks.setter(task_id);
-            task_u.status.set(U8::from(1));
-        }
         let completer = self
             .task_submissions
             .get(task_id)
             .get(submission_id)
             .submitter
             .get();
+
+        // Update task status and winner
+        {
+            let mut task_u = self.tasks.setter(task_id);
+            task_u.status.set(U8::from(2)); // 2 = Approved
+            task_u.winner.set(completer);
+        }
+
+        // Approve submission
         self.task_submissions
             .setter(task_id)
             .setter(submission_id)
             .approved
             .set(true);
+
+        // Transfer bounty
         let bounty;
         let token_addr;
         {
@@ -166,14 +171,28 @@ impl GigEconomy {
         let token_contract = IErc20::new(token_addr);
         let _ = token_contract.transfer(&mut *self, completer, bounty);
 
+        // Update user stats correctly
         let completed_count;
+        let total_earned;
         {
-            completed_count = self.user_stats.get(completer).completed_count.get();
+            let stats_ro = self.user_stats.get(completer);
+            completed_count = stats_ro.completed_count.get();
+            total_earned = stats_ro.total_earned.get();
         }
         let mut stats = self.user_stats.setter(completer);
-        stats.completed_count.set(completed_count);
-        stats.total_earned.set(bounty);
+        stats.completed_count.set(completed_count + U256::from(1)); // INCREMENT
+        stats.total_earned.set(total_earned + bounty); // ADD bounty
+
+        // Emit event
+        log(
+            self.vm(),
+            TaskApproved {
+                id: task_id,
+                winner: completer,
+            },
+        );
     }
+
     pub fn get_all_tasks_counter(&self) -> U256 {
         self.task_counter.get()
     }
@@ -209,13 +228,13 @@ impl GigEconomy {
         (id, submitter, approved, content)
     }
 }
+
 impl GigEconomy {
     fn _check_if_task_id_is_valid(&self, task_id: &U256) {
         assert!(self.task_counter.get() >= *task_id, "");
     }
     fn _check_if_task_is_open(&self, status: &U8) {
-        let status: TaskStatus = TaskStatus::from(*status);
-        assert!(status == TaskStatus::Open, "Task not open");
+        assert!(status == &U8::from(0), "Task not open");
     }
     fn _get_msg_sender(&self) -> Address {
         self.vm().msg_sender()
