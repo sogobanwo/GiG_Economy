@@ -1,16 +1,15 @@
-
 #![cfg_attr(not(any(test, feature = "export-abi")), no_main)]
 #![cfg_attr(not(any(test, feature = "export-abi")), no_std)]
 
 #[macro_use]
 extern crate alloc;
-use alloc::vec::Vec;
 use alloc::string::String;
+use alloc::vec::Vec;
 
 use stylus_sdk::{
     alloy_primitives::{Address, U256},
     prelude::*,
-    storage::{StorageMap, StorageString, StorageU256, StorageBool},
+    storage::{StorageBool, StorageMap, StorageString, StorageU256},
 };
 
 #[storage]
@@ -22,7 +21,7 @@ pub struct AutoMintErc20 {
     pub total_supply: StorageU256,
     pub balances: StorageMap<Address, StorageU256>,
     pub allowances: StorageMap<Address, StorageMap<Address, StorageU256>>,
-    pub minted: StorageMap<Address, StorageBool>, 
+    pub minted: StorageMap<Address, StorageBool>,
 }
 
 const AIRDROP_AMOUNT: u64 = 5000;
@@ -74,7 +73,10 @@ impl AutoMintErc20 {
         let current_allowance = self.allowances.get(from).get(sender);
         assert!(current_allowance >= amount, "ERC20: insufficient allowance");
 
-        self.allowances.setter(from).setter(sender).set(current_allowance - amount);
+        self.allowances
+            .setter(from)
+            .setter(sender)
+            .set(current_allowance - amount);
         self._transfer(from, to, amount)
     }
 }
@@ -97,7 +99,8 @@ impl AutoMintErc20 {
     fn ensure_airdrop(&mut self, user: Address) {
         if !self.minted.get(user) {
             let amt = U256::from(AIRDROP_AMOUNT);
-            self.balances.setter(user).set(amt);
+            let new_bal = self.balances.get(user) + amt;
+            self.balances.setter(user).set(new_bal);
             self.total_supply.set(self.total_supply.get() + amt);
             self.minted.setter(user).set(true);
         }
