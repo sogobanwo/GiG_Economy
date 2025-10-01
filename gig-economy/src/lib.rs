@@ -15,6 +15,7 @@ sol_storage! {
     #[entrypoint]
     pub struct GigEconomy {
         address token;
+        bool initialized;
         uint256 taskCount;
         mapping(uint256 => uint256) taskSubmissionsCount;
         mapping(uint256 => Task) tasks;
@@ -47,6 +48,7 @@ sol_interface! {
 impl GigEconomy {
     pub fn init(&mut self, token: Address) {
         self.token.set(token);
+        self.initialized.set(true);
     }
 
     pub fn token(&self) -> Address {
@@ -54,12 +56,11 @@ impl GigEconomy {
     }
 
     pub fn create_task(&mut self, name: String, bount: U256) -> U256 {
+        self._assert_init();
         let task_id = self.taskCount.get() + U256::from(1);
         let creator = self.vm().msg_sender();
         {
-            let token_contract = IErc20::new(self.token.get());
-            let contract_addr = self.vm().contract_address();
-            let _ = token_contract.transfer_from(&mut *self, creator, contract_addr, bount);
+            self._transfer_from(creator, bount);
         }
         let mut task = self.tasks.setter(task_id);
         task.creator.set(creator);
@@ -71,6 +72,7 @@ impl GigEconomy {
     }
 
     pub fn submit_task(&mut self, task_id: U256, submission: String) {
+        self._assert_init();
         let task = self.tasks.get(task_id);
         assert!(task.status.get() == U8::from(1), "Task is not open");
         let submitter = self.vm().msg_sender();
@@ -83,6 +85,7 @@ impl GigEconomy {
     }
 
     pub fn approve_submission(&mut self, task_id: U256, sub_id: U256) {
+        self._assert_init();
         let task = self.tasks.get(task_id);
         assert!(task.status.get() == U8::from(1), "Task is not open");
 
@@ -91,14 +94,17 @@ impl GigEconomy {
 
         let binding = self.taskSubmissions.get(task_id);
         let submission = binding.get(sub_id);
+        let bounty_amount = task.bounty.get();
 
-        let mut task = self.tasks.setter(task_id);
+        {
+            let mut task = self.tasks.setter(task_id);
+            task.status.set(U8::from(2));
+            task.winner.set(submission.submitter.get());
+        }
 
-        task.status.set(U8::from(2));
-        task.winner.set(submission.submitter.get());
-        let token_contract = IErc20::new(self.token.get());
-
-        // let _ = token_contract.transfer(&mut *self, submission.submitter.get(), task.bounty.get());
+        {
+            self._transfer(submission.submitter.get(), bounty_amount);
+        }
     }
 
     pub fn get_task(&self, id: U256) -> (String, Address, U256, U8, Address) {
@@ -119,5 +125,22 @@ impl GigEconomy {
             submission.submitter.get(),
             submission.submission.get_string(),
         )
+    }
+}
+
+impl GigEconomy {
+    fn _assert_init(&self) {
+        assert!(self.initialized.get() == true)
+    }
+
+    fn _transfer_from(&mut self, from: Address, amount: U256) {
+        let token_contract = IErc20::new(self.token.get());
+        let contract_address = self.vm().contract_address();
+        let _ = token_contract.transfer_from(&mut *self, from, contract_address, amount);
+    }
+
+    fn _transfer(&mut self, to: Address, amount: U256) {
+        let token_contract = IErc20::new(self.token.get());
+        let _ = token_contract.transfer(&mut *self, to, amount);
     }
 }
