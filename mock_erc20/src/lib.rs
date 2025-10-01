@@ -24,7 +24,7 @@ pub struct AutoMintErc20 {
     pub minted: StorageMap<Address, StorageBool>,
 }
 
-const AIRDROP_AMOUNT: u64 = 5000;
+const AIRDROP_AMOUNT: u64 = 5_000_000_000_000_000_000;
 
 #[public]
 impl AutoMintErc20 {
