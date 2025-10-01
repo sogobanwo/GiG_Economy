@@ -55,6 +55,14 @@ impl GigEconomy {
         self.token.get()
     }
 
+    pub fn get_task_count(&self) -> U256 {
+        self.taskCount.get()
+    }
+
+    pub fn get_task_submission_count(&self, task_id: U256) -> U256 {
+        self.taskSubmissionsCount.get(task_id)
+    }
+
     pub fn create_task(&mut self, name: String, bount: U256) -> U256 {
         self._assert_init();
         let task_id = self.taskCount.get() + U256::from(1);
