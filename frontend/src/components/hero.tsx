@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { FileText, Sparkles } from "lucide-react";
+import { FileText } from "lucide-react";
 import { RoboAnimation } from "@/components/robo-animation";
 import { FloatingPaper } from "./floating-paper";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import { useAppKit } from "@reown/appkit/react";
 
 export default function Hero() {
-  const { address, isConnected } = useAppKitAccount();
+  const { isConnected } = useAppKitAccount();
   const { open } = useAppKit();
   const router = useRouter();
 

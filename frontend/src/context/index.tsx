@@ -15,7 +15,7 @@ const metadata = {
   name: "GiG_Economy",
   description:
     "Leverage our decentralized platform to streamline task creation, assignment, and verification – powered by the Arbitrum sylus network.",
-  url: "https://www.example.com",
+  url: "https://gi-g-economy.vercel.app/",
   icons: ["https://avatars.githubusercontent.com/u/179229932"],
 };
 
