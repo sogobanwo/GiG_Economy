@@ -19,72 +19,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import useGetAllTask from "@/hooks/read-hooks/useGetAllTaskCounter";
 import { formatEther } from "viem";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { useMemo } from "react";
+import NotConnected from "@/components/not-connected";
+import { useAppKitAccount } from "@reown/appkit/react";
+import useGetAllSubmissions from "@/hooks/read-hooks/useGetAllSubmissions";
+import Link from "next/link";
 import { useState } from "react";
-import useSubmitTask from "@/hooks/write-hooks/useSubmitTask";
-import { toast } from "sonner";
+import useGetAllTasks from "@/hooks/read-hooks/useGetAllTask";
 
 export default function AvailableTasksPage() {
-  const { data: tasks, isLoading, isError, error } = useGetAllTask();
-  const submitTask = useSubmitTask();
-  const [formState, setFormState] = useState({
-    taskId: "",
-    publicHash: "",
-    answer: "",
-    proof: null,
-  });
+  const { loading, data: tasks } = useGetAllTasks();
+  const { loading: subsLoading, data: submissions } = useGetAllSubmissions();
+  const { address, isConnected } = useAppKitAccount();
 
-  const handleChange = (field: string, value: string) => {
-    setFormState((prev) => ({ ...prev, [field]: value }));
-  };
+  const submissionById = useMemo(() => {
+    const map = new Map<string, any>();
+    (submissions || []).forEach((s: any) => {
+      if (s?.dbId) map.set(String(s.dbId), s);
+    });
+    return map;
+  }, [submissions]);
+  // Filters
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<"all" | "open" | "closed">("all");
+  const [sort, setSort] = useState<"newest" | "reward-high">("newest");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-   
-
-      // Submit task
-      const response = await submitTask(
-        Number(formState.taskId),
-        "1",
-        formState.publicHash
-      );
-
-      if (response) {
-        toast.success("Task submitted and verified successfully");
-        setFormState({
-          taskId: "",
-          publicHash: "",
-          answer: "",
-          proof: null,
-        });
-      } else {
-        toast.error("Error verifying answer");
-      }
-    } catch (err) {
-      console.error("Error submitting task:", err);
-      toast.error("Failed to submit task");
+  const visibleTasks = useMemo(() => {
+    let list = Array.isArray(tasks) ? tasks : [];
+    // filter by search
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter((t: any) => String(t?.name ?? "").toLowerCase().includes(q));
     }
-  };
+    // filter by status
+    if (status === "open") list = list.filter((t: any) => Number(t?.status ?? 0) === 0);
+    if (status === "closed") list = list.filter((t: any) => Number(t?.status ?? 0) !== 0);
+    // sort
+    if (sort === "newest") {
+      list = [...list].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else if (sort === "reward-high") {
+      list = [...list].sort((a: any, b: any) => Number(b?.bounty ?? BigInt(0)) - Number(a?.bounty ?? BigInt(0)));
+    }
+    return list;
+  }, [tasks, search, status, sort]);
 
-  const handleDialogOpen = (task: any) => {
-    setFormState((prev) => ({
-      ...prev,
-      taskId: task.taskId.toString(),
-      publicHash: task.publicHash,
-    }));
-  };
+  if (!isConnected) {
+    return <NotConnected pageName={"Available Tasks"} />;
+  }
 
   return (
     <div className="relative z-10 container mx-auto px-6 py-16">
@@ -109,21 +91,22 @@ export default function AvailableTasksPage() {
               <Input
                 placeholder="Search tasks..."
                 className="bg-white/5 border-white/10 text-white pl-10 placeholder:text-gray-500"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Select>
+              <Select value={status} onValueChange={(val) => setStatus(val as any)}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white w-full sm:w-40">
-                  <SelectValue placeholder="Difficulty" className="placeholder:text-gray-500" />
+                  <SelectValue placeholder="Status" className="placeholder:text-gray-500" />
                 </SelectTrigger>
                 <SelectContent className="bg-black/90 border-white/10 text-white">
-                  <SelectItem value="all">All Difficulties</SelectItem>
-                  <SelectItem value="0">Easy</SelectItem>
-                  <SelectItem value="1">Medium</SelectItem>
-                  <SelectItem value="2">Hard</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
-              <Select>
+              <Select value={sort} onValueChange={(val) => setSort(val as any)}>
                 <SelectTrigger className="bg-white/5 border-white/10 text-white w-full sm:w-40">
                   <SelectValue placeholder="Sort By" className="placeholder:text-gray-500"/>
                 </SelectTrigger>
@@ -138,10 +121,12 @@ export default function AvailableTasksPage() {
 
         {/* Task Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.isArray(tasks) && tasks.length > 0 ? (
-            tasks.map((task: any, index: number) => (
+          {loading ? (
+            <div className="text-gray-400">Loading tasks...</div>
+          ) : Array.isArray(visibleTasks) && visibleTasks.length > 0 ? (
+            visibleTasks.map((task: any, index: number) => (
               <motion.div
-                key={task.taskId}
+                key={task.dbId ?? task.taskId ?? index}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
@@ -150,121 +135,51 @@ export default function AvailableTasksPage() {
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-white text-xl">
-                        {task.title}
+                        {task?.name ?? `Task ${index + 1}`}
                       </CardTitle>
-                      <Badge
-                        className={`
-                  ${
-                    task.difficulty === 0
-                      ? "bg-green-500/20 text-green-400"
-                      : task.difficulty === 1
-                      ? "bg-yellow-500/20 text-yellow-400"
-                      : "bg-red-500/20 text-red-400"
-                  }
-                `}
-                      >
-                        {task.difficulty === 0
-                          ? "Easy"
-                          : task.difficulty === 1
-                          ? "Medium"
-                          : "Hard"}
+                      <Badge className="bg-white/10 text-white">
+                        {task?.status === 0 ? "Open" : "Closed"}
                       </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="flex-grow">
-                    <p className="text-gray-400 mb-4">{task.description}</p>
-                    <div className="flex items-center text-gray-500 mb-2">
-                      <FileText className="h-4 w-4 mr-2" />
-                      <a
-                        href={task.publicHash}
-                        className="text-purple-400 hover:text-purple-300 text-sm truncate"
-                      >
-                        {task.publicHash}
-                      </a>
+                    <div className="flex items-center text-gray-400 mb-2">
+                      <span className="text-sm">Creator:</span>
+                      <span className="ml-2 text-sm text-purple-300">
+                        {task?.creator
+                          ? `${task.creator.slice(0, 6)}...${task.creator.slice(-4)}`
+                          : "N/A"}
+                      </span>
                     </div>
                     <div className="flex items-center text-gray-500">
                       <Award className="h-4 w-4 mr-2" />
                       <span className="text-sm">
-                        {formatEther(task.reward)} ETH
+                        {typeof task?.bounty === "bigint" ? formatEther(task.bounty) : "0"} ETH
                       </span>
                     </div>
+                    {task?.approvedSubmissionId && (
+                      <div className="mt-3">
+                        {(() => {
+                          const approved = submissionById.get(String(task.approvedSubmissionId));
+                          const approvedForSomeoneElse = Boolean(
+                            approved?.submitter && address && approved.submitter.toLowerCase() !== address.toLowerCase()
+                          );
+                          return approvedForSomeoneElse ? (
+                            <Badge className="bg-yellow-500/20 text-yellow-300">Approved for someone else</Badge>
+                          ) : (
+                            <Badge className="bg-green-500/20 text-green-300">Approved (you)</Badge>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </CardContent>
-                  <Dialog>
-                    <CardFooter className="border-t border-white/10 pt-4">
-                      <DialogTrigger asChild>
-                        <Button
-                          className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                          onClick={() => handleDialogOpen(task)}
-                        >
-                          Submit Response to Task
-                        </Button>
-                      </DialogTrigger>
-                    </CardFooter>
-                    <DialogContent className="sm:max-w-[425px] bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl">
-                      <DialogHeader>
-                        <DialogTitle className="text-white">
-                          Submit Your response
-                        </DialogTitle>
-                        <DialogDescription className="text-gray-500">
-                          Type in your answer in the answer input box and click
-                          on the submit button.
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-2">
-                          <Label className="text-white">Task Id</Label>
-                          <Input
-                            id="id"
-                            placeholder="Task ID"
-                            className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
-                            value={formState.taskId}
-                            disabled
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-white">Your Response</Label>
-                          <Input
-                            id="answer"
-                            placeholder="Enter your answer"
-                            className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
-                            value={formState.answer}
-                            onChange={(e) =>
-                              handleChange("answer", e.target.value)
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-white">Task Public Hash</Label>
-                          <Input
-                            id="publicHash"
-                            placeholder="Public Hash"
-                            className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
-                            value={formState.publicHash}
-                            disabled
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-white">Generated proof</Label>
-                          <Input
-                            id="proof"
-                            placeholder="Proof"
-                            className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
-                            value={
-                              formState.proof === null ? "" : formState.proof
-                            }
-                            disabled
-                          />
-                        </div>
-                        <Button
-                          type="submit"
-                          className="bg-purple-600 hover:bg-purple-700 text-white"
-                        >
-                          Submit Response
-                        </Button>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
+                  <CardFooter className="border-t border-white/10 pt-4">
+                    <Link href={`/tasks/${task.dbId}`} className="w-full">
+                      <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                        View & Submit
+                      </Button>
+                    </Link>
+                  </CardFooter>
                 </Card>
               </motion.div>
             ))

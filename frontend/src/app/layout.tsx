@@ -5,7 +5,7 @@ import { SparklesCore } from "@/components/sparkles";
 import Navbar from "@/components/navbar";
 import { headers } from "next/headers";
 import ContextProvider from "@/context";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

@@ -1,73 +1,68 @@
-import { ethers } from "ethers";
-import { getAddress } from "viem";
-import multicallAbi from "../../abis/multicall.json";
-import abi from "../../abis/abi.json";
-import { readOnlyProvider } from "@/config/providers";
 import { useEffect, useState } from "react";
-import { getGigContract } from "@/config/contracts";
+import { readContract } from "wagmi/actions";
+import { config } from "@/config";
+import { getAddress } from "viem";
+import abi from "../../abis/abi.json";
 
 const useGetAllTasks = () => {
-  const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as string;
-  const multicallAddress = process.env
-    .NEXT_PUBLIC_MULTICALL_CONTRACT_ADDRESS as string;
-
-  const [data, setData] = useState({ loading: true, data: [] });
+  const [data, setData] = useState<{ loading: boolean; data: any[] }>({ loading: true, data: [] });
 
   useEffect(() => {
     (async () => {
-      const contract = getGigContract(readOnlyProvider);
-
-      const taskCounter = await contract.getAllTasksCounter();
-
-      const numberOfCalls = taskCounter;
-
-      const itf = new ethers.Interface(abi);
-
-      let calls = [];
-
-      for (let i = 0; i < Number(numberOfCalls); i++) {
-        calls.push({
-          target: getAddress(contractAddress),
-          callData: itf.encodeFunctionData("getTask", [i]),
-        });
-      }
-
-      const multicall = new ethers.Contract(
-        multicallAddress,
-        multicallAbi,
-        readOnlyProvider
-      );
-
-      const callResults = await multicall.tryAggregate.staticCall(false, calls);
-
-      const validResponsesIndex = [];
-
-      const validResponses = callResults.filter((x: boolean[], i: any) => {
-        if (x[0] === true) {
-          validResponsesIndex.push(i);
-          return true;
+      try {
+        const res = await fetch('/api/tasks');
+        if (!res.ok) {
+          throw new Error('Failed to fetch tasks from API');
         }
-        return false;
-      });
-
-      console.log(validResponses);
-
-      const decodedResponses = validResponses.map((x: ethers.BytesLike[]) =>
-        itf.decodeFunctionResult("getTask", x[1])
-      );
-
-      console.log(decodedResponses);
-
-      let prop: any = [];
-
-      for (let i = 0; i < decodedResponses.length; i++) {
-        const obj = decodedResponses[i][0];
-        prop.push({
-          obj,
-        });
+        const { tasks } = await res.json();
+        const mapped = (tasks || []).map((t: any, i: number) => ({
+          taskId: t.contractTaskId ?? i,
+          dbId: t._id,
+          name: t.name ?? `Task ${i}`,
+          creator: t.creator ?? "0x0000000000000000000000000000000000000000",
+          bounty: t.bounty ? BigInt(t.bounty) : BigInt(0),
+          status: t.status ?? 0,
+          contractTaskId: t.contractTaskId ?? null,
+          approvedSubmissionId: t.approvedSubmissionId ?? null,
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+        }));
+        // Optionally enrich with on-chain data when contractTaskId is present
+        const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
+        if (contractAddress) {
+          const addressOfContract = getAddress(contractAddress);
+          const enriched = await Promise.all(
+            mapped.map(async (item: any) => {
+              if (item.contractTaskId == null) return item;
+              try {
+                const onChain: any = await readContract(config, {
+                  abi,
+                  address: addressOfContract,
+                  functionName: "getTask",
+                  args: [Number(item.contractTaskId)],
+                });
+                const [name, creator, bounty, status] = onChain as [string, `0x${string}`, bigint, number];
+                return {
+                  ...item,
+                  name: name ?? item.name,
+                  creator: creator ?? item.creator,
+                  bounty: typeof bounty === 'bigint' ? bounty : item.bounty,
+                  status: typeof status === 'number' ? status : item.status,
+                };
+              } catch (e) {
+                console.warn('Failed to read task on-chain', e);
+                return item;
+              }
+            })
+          );
+          setData({ loading: false, data: enriched });
+        } else {
+          setData({ loading: false, data: mapped });
+        }
+      } catch (error) {
+        console.error('Error fetching tasks from API:', error);
+        setData({ loading: false, data: [] });
       }
-
-      setData({ loading: false, data: prop });
     })();
   }, []);
   return data;

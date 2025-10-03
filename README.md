@@ -79,14 +79,12 @@ Fund wallets with Sepolia ETH from a faucet.
 - `create_task(bounty, description)`: Creates a task and locks the bounty in escrow.
 - `submit_task(task_id, submission)`: Completer submits work (URL/text).
 - `approve_task(task_id)`: Creator approves, releasing the payout.
-- `dispute_task(task_id)`: Creator disputes, blocking the payout.
 - `withdraw(task_id)`: Refunds creator if task is uncompleted or disputed.
 
 ### Events
 - `TaskCreated(task_id, creator, bounty, description)`
 - `TaskSubmitted(task_id, completer, submission)`
 - `TaskApproved(task_id, completer)`
-- `TaskDisputed(task_id)`
 
 ### Security
 - Rust memory safety prevents reentrancy and overflow.

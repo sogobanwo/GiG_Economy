@@ -21,18 +21,13 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import useCreateTask from "@/hooks/write-hooks/useCreateTask";
 import { parseEther } from "viem";
 import { toast } from "sonner";
-import useGetAllTasks from "@/hooks/read-hooks/useGetAllTask";
 import useGetTaskById from "@/hooks/read-hooks/useGetTaskById";
+import useApproveToken from "@/hooks/write-hooks/useApproveToken";
 
 export default function CreateTaskPage() {
   const { isConnected } = useAppKitAccount();
-  const task = useGetTaskById(1)
-  console.log(task.data)
-
-  const allTask = useGetAllTasks()
-  console.log(allTask)
-
   const createTask = useCreateTask();
+  const approveToken = useApproveToken();
   const [formState, setFormState] = useState({
     description: "",
     bounty: "",
@@ -44,19 +39,34 @@ export default function CreateTaskPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      const response1 = await approveToken(
+        parseEther(formState.bounty)
+      );
 
-    // Create task
-    const response = await createTask(
-      formState.description,
-      parseEther(formState.bounty)
-    );
+      if (!response1) {
+        toast.error("Token approval failed");
+        return;
+      }
+      toast.success("Token approved");
 
-    if (response) {
-      toast.success("Task created");
-      setFormState({
-        description: "",
-        bounty: "",
-      });
+      // Create task
+      const response = await createTask(
+        formState.description,
+        parseEther(formState.bounty)
+      );
+
+      if (response) {
+        toast.success("Task created");
+        setFormState({
+          description: "",
+          bounty: "",
+        });
+      } else {
+        toast.error("Task creation failed");
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Operation failed");
     }
   };
 

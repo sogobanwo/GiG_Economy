@@ -32,14 +32,6 @@ export default function Navbar() {
       name: "Available Task",
       href: "/available-task",
     },
-    {
-      name: "Completed Task",
-      href: "/completed-task",
-    },
-    {
-      name: "My Rewards",
-      href: "/rewards",
-    },
   ];
   return (
     <>
@@ -53,7 +45,7 @@ export default function Navbar() {
           <span className="text-white font-medium text-xl">GiG_Economy</span>
         </Link>
 
-        <div className="hidden md:flex items-center space-x-8">
+        <div className="hidden md:flex items-center justify-center space-x-8">
           {allLinks.map((task, index) => {
             return (
               <NavLink key={index} href={task.href}>
@@ -64,9 +56,6 @@ export default function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center space-x-4">
-          <Button variant="ghost" className="text-white hover:text-purple-400">
-            View Docs
-          </Button>
           {isConnected ? (
             <appkit-button balance="show" size="md" label="Get Started" />
           ) : (

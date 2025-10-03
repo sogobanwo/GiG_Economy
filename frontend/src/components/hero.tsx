@@ -70,15 +70,6 @@ export default function Hero() {
                 Get Started
               </Button>
             )}
-
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-white border-purple-500 hover:bg-purple-500/20 hover:text-white"
-            >
-              <Sparkles className="mr-2 h-5 w-5" />
-              View Docs
-            </Button>
           </motion.div>
         </div>
       </div>
