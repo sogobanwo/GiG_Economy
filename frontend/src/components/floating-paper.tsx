@@ -6,13 +6,11 @@ import { FileText } from "lucide-react";
 
 export function FloatingPaper({ count = 5 }) {
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
-  const [isClient, setIsClient] = useState(false); // Track if the component is on the client
+  const [isClient, setIsClient] = useState(false); 
 
   useEffect(() => {
-    // Set isClient to true after hydration
     setIsClient(true);
 
-    // Update dimensions only on client side
     setDimensions({
       width: window.innerWidth,
       height: window.innerHeight,

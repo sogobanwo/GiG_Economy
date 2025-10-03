@@ -21,7 +21,6 @@ import { useAppKitAccount } from "@reown/appkit/react";
 import useCreateTask from "@/hooks/write-hooks/useCreateTask";
 import { parseEther } from "viem";
 import { toast } from "sonner";
-import useGetTaskById from "@/hooks/read-hooks/useGetTaskById";
 import useApproveToken from "@/hooks/write-hooks/useApproveToken";
 
 export default function CreateTaskPage() {
@@ -50,7 +49,6 @@ export default function CreateTaskPage() {
       }
       toast.success("Token approved");
 
-      // Create task
       const response = await createTask(
         formState.description,
         parseEther(formState.bounty)

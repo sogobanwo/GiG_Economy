@@ -48,7 +48,7 @@ const useGetSubmissionsByTaskDbId = (taskDbId: string | any | null | undefined) 
           approved: Boolean(s.approved ?? false),
           createdAt: s.createdAt,
         }));
-        // Optionally enrich from on-chain when possible
+
         const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
         const taskRes = await fetch(`/api/tasks/${targetId}`);
         const { task } = taskRes.ok ? await taskRes.json() : { task: null };

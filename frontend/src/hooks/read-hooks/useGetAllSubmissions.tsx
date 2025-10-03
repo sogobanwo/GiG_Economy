@@ -28,11 +28,11 @@ const useGetAllSubmissions = () => {
           approved: Boolean(s.approved ?? false),
           createdAt: s.createdAt,
         }));
-        // Optionally enrich with on-chain data when contractSubId is present
+
         const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
         if (contractAddress) {
           const addr = getAddress(contractAddress);
-          // Build task contract id lookup to avoid N fetches
+
           const tasksRes = await fetch('/api/tasks');
           const { tasks } = tasksRes.ok ? await tasksRes.json() : { tasks: [] };
           const taskContractByDbId: Record<string, number> = {};

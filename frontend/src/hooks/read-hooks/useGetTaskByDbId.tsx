@@ -35,7 +35,7 @@ const useGetTaskByDbId = (dbId: string | null | undefined) => {
           createdAt: task.createdAt,
           updatedAt: task.updatedAt,
         };
-        // Optionally enrich with on-chain data when contractTaskId is present
+
         const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
         if (contractAddress && mapped.contractTaskId != null) {
           try {

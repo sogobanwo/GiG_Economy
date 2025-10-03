@@ -26,7 +26,6 @@ const useCreateTask = () => {
       bounty: bigint,
     ) => {
       try {
-        // Validate inputs
         if (!description || !bounty) {
           throw new Error("All parameters are required");
         }
@@ -35,10 +34,14 @@ const useCreateTask = () => {
           throw new Error("Wallet not connected: missing creator address");
         }
 
-        // Ensure the contract address is valid
         const addressOfContract = getAddress(contractAddress);
+          const result = await writeContractAsync({
+          abi,
+          address: addressOfContract,
+          functionName: "createTask",
+          args: [description, bounty],
+        });
 
-        // 1) Persist to backend first
         const apiRes = await fetch("/api/tasks", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -51,14 +54,6 @@ const useCreateTask = () => {
         }
 
         const { task } = await apiRes.json();
-
-        // 2) Call the contract
-        const result = await writeContractAsync({
-          abi,
-          address: addressOfContract,
-          functionName: "createTask",
-          args: [description, bounty],
-        });
 
         return { onChain: result, task };
       } catch (err) {

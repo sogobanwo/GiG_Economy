@@ -32,7 +32,7 @@ const useGetSubmissionByDbId = (dbId: string | null | undefined) => {
           approved: Boolean(submission.approved ?? false),
           createdAt: submission.createdAt,
         };
-        // Optionally enrich from on-chain when task and sub contract ids exist
+
         const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
         if (contractAddress && mapped.contractSubId != null) {
           try {

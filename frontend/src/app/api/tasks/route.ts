@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 
-// GET /api/tasks - list all tasks
 export async function GET() {
   try {
     const db = await getDb()
@@ -12,7 +11,6 @@ export async function GET() {
   }
 }
 
-// POST /api/tasks - create a task (persist in DB first)
 export async function POST(req: Request) {
   try {
     const body = await req.json()

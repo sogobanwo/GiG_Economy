@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { ObjectId } from 'mongodb'
 
-// GET /api/submissions - list all submissions
 export async function GET() {
   try {
     const db = await getDb()
@@ -13,7 +12,6 @@ export async function GET() {
   }
 }
 
-// POST /api/submissions - create a submission (persist in DB first)
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -46,7 +44,6 @@ export async function POST(req: Request) {
     const result = await db.collection('submissions').insertOne(doc)
     const submission = { _id: result.insertedId, ...doc }
 
-    // TODO: Optionally call the contract here to submitTask and set contractSubId
 
     return NextResponse.json({ submission }, { status: 201 })
   } catch (e: any) {

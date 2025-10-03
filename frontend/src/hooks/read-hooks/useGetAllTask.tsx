@@ -27,7 +27,7 @@ const useGetAllTasks = () => {
           createdAt: t.createdAt,
           updatedAt: t.updatedAt,
         }));
-        // Optionally enrich with on-chain data when contractTaskId is present
+
         const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
         if (contractAddress) {
           const addressOfContract = getAddress(contractAddress);

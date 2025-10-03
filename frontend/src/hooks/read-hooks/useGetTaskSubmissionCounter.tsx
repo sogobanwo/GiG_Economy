@@ -4,7 +4,6 @@ import { config } from "@/config";
 import { getAddress } from "viem";
 import abi from "../../abis/abi.json";
 
-// Merged: gets submission count from API and optionally from contract
 const useGetTaskSubmissionCounter = () => {
   const [state, setState] = useState<{ loading: boolean; data: { apiCount: number; contractCount?: number } | null; error?: string }>({
     loading: true,

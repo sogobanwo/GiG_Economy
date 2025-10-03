@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { FileText, Award, Search } from "lucide-react";
+import { Award, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -47,15 +47,15 @@ export default function AvailableTasksPage() {
 
   const visibleTasks = useMemo(() => {
     let list = Array.isArray(tasks) ? tasks : [];
-    // filter by search
+
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter((t: any) => String(t?.name ?? "").toLowerCase().includes(q));
     }
-    // filter by status
+
     if (status === "open") list = list.filter((t: any) => Number(t?.status ?? 0) === 0);
     if (status === "closed") list = list.filter((t: any) => Number(t?.status ?? 0) !== 0);
-    // sort
+
     if (sort === "newest") {
       list = [...list].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } else if (sort === "reward-high") {

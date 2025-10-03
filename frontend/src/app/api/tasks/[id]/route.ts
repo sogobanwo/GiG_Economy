@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { getDb } from '@/lib/mongodb'
 import { ObjectId } from 'mongodb'
 
-// GET /api/tasks/[id] - get a single task by id
-export async function GET(_: Request, { params }: { params: { id: string } }) {
+export async function GET(_: Request, { params }: any) {
   try {
     const id = params.id
     if (!ObjectId.isValid(id)) {

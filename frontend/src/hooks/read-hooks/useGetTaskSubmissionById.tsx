@@ -4,7 +4,7 @@ import { config } from "@/config";
 import { getAddress } from "viem";
 import abi from "../../abis/abi.json";
 
-// Merged: reads on-chain submission and enriches with DB submission when available
+
 const useGetTaskSubmissionById = (task_id: number, submission_id: number) => {
   const [state, setState] = useState<{ loading: boolean; data: any | null; error?: string }>({
     loading: true,
@@ -31,7 +31,6 @@ const useGetTaskSubmissionById = (task_id: number, submission_id: number) => {
           }
         }
 
-        // Fetch DB data to try and find matching submission by contractSubId and task contract id
         const tasksRes = await fetch('/api/tasks');
         const { tasks } = tasksRes.ok ? await tasksRes.json() : { tasks: [] };
         const dbTask = (tasks || []).find((t: any) => Number(t.contractTaskId) === Number(task_id)) ?? null;

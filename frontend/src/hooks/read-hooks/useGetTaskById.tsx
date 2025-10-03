@@ -30,7 +30,6 @@ const useGetTaskById = (task_id: number) => {
           }
         }
 
-        // Fetch DB tasks and find corresponding record by contractTaskId
         const dbRes = await fetch('/api/tasks');
         const { tasks } = dbRes.ok ? await dbRes.json() : { tasks: [] };
         const dbTask = (tasks || []).find((t: any) => Number(t.contractTaskId) === Number(task_id)) ?? null;
@@ -76,7 +75,6 @@ const useGetTaskById = (task_id: number) => {
           return;
         }
 
-        // Fallback to DB-only mapping
         setState({ loading: false, data: mappedFromDb });
       } catch (e: any) {
         setState({ loading: false, data: null, error: e?.message ?? 'Failed to get task' });

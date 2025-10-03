@@ -27,10 +27,8 @@ const useApproveToken = () => {
       amount: BigInt,
     ) => {
       try {
-        // Ensure the contract address is valid
         const address = getAddress(tokenAddress);
 
-        // Call the contract
         const result = await writeContractAsync({
           abi,
           address,
